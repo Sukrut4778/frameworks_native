@@ -1983,6 +1983,7 @@ void SurfaceFlinger::onMessageInvalidate(nsecs_t expectedVSyncTime) {
 
         refreshNeeded = handleMessageTransaction();
         refreshNeeded |= handleMessageInvalidate();
+        clearCurrentStateLayerNotifiedFrameNumber();
         if (mTracingEnabled) {
             mAddCompositionStateToTrace =
                     mTracing.flagIsSetLocked(SurfaceTracing::TRACE_COMPOSITION);
@@ -3055,6 +3056,7 @@ void SurfaceFlinger::commitTransactionLocked() {
             // Ensure any buffers set to display on any children are released.
             if (l->isRemovedFromCurrentState()) {
                 l->latchAndReleaseBuffer();
+                l->clearNotifiedFrameNumber();
             }
 
             // If the layer has been removed and has no parent, then it will not be reachable
@@ -3391,10 +3393,6 @@ void SurfaceFlinger::setTransactionState(
     }
 
     const bool pendingTransactions = itr != mTransactionQueues.end();
-    // Expected present time is computed and cached on invalidate, so it may be stale.
-    if (!pendingTransactions) {
-        mExpectedPresentTime = calculateExpectedPresentTime(systemTime());
-    }
 
     if (pendingTransactions || !transactionIsReadyToBeApplied(desiredPresentTime, states)) {
         mTransactionQueues[applyToken].emplace(states, displays, flags, desiredPresentTime,
@@ -6422,6 +6420,13 @@ void SurfaceFlinger::enableRefreshRateOverlay(bool enable) {
             mRefreshRateOverlay->changeRefreshRate(mRefreshRateConfigs->getCurrentRefreshRate());
         }
     }));
+}
+
+void SurfaceFlinger::clearCurrentStateLayerNotifiedFrameNumber() {
+    Mutex::Autolock _l(mStateLock);
+    mCurrentState.traverseInZOrder([](Layer* layer) {
+        layer->clearNotifiedFrameNumber();
+    });
 }
 
 } // namespace android

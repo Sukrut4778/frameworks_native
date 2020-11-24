@@ -1441,6 +1441,8 @@ private:
 
     sp<IBinder> mDebugFrameRateFlexibilityToken;
 
+    void clearCurrentStateLayerNotifiedFrameNumber();
+
     SmomoWrapper mSmoMo;
     LayerExtWrapper mLayerExt;
 
